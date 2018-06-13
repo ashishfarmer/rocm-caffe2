@@ -353,17 +353,20 @@ bool MIOPENConvOp::DoRunWithType()
             CAFFE_ENFORCE_EQ(bias.ndim(), 1);
             CAFFE_ENFORCE_EQ(bias.dim32(0), M);
             miopen_wrapper_.with_miopen_state(miopen_state_, [&](MIOPENState* state) {
-                MIOPEN_ENFORCE(miopenConvolutionForwardBias(state->miopen_handle(),
-                                                            &alpha_,
-                                                            bias_desc_,
-                                                            bias.template data<T_B>(),
-                                                            &beta_,
-                                                            top_desc_for_bias_,
-                                                            Y->template mutable_data<T_Y>()));
+                MIOPEN_ENFORCE(miopenOpTensor(state->miopen_handle(),
+                                              miopenTensorOpAdd,
+                                              &alpha_,
+                                              top_desc_,
+                                              Y->template data<T_Y>(),
+                                              &alpha_,
+                                              bias_desc_,
+                                              bias.template data<T_B>(),
+                                              &beta_,
+                                              top_desc_,
+                                              Y->template mutable_data<T_Y>()));
+                hipDeviceSynchronize();
             });
         }
-
-        hipDeviceSynchronize();
     }
     else // no group
     {
@@ -437,6 +440,7 @@ bool MIOPENConvOp::DoRunWithType()
                                                     Y->template mutable_data<T_Y>(),
                                                     fwdConvWs,
                                                     fwdConvWsSize_));
+            hipDeviceSynchronize();
         });
 
         // BIAS
@@ -446,18 +450,22 @@ bool MIOPENConvOp::DoRunWithType()
 
             CAFFE_ENFORCE_EQ(bias.ndim(), 1);
             CAFFE_ENFORCE_EQ(bias.dim32(0), M);
+
             miopen_wrapper_.with_miopen_state(miopen_state_, [&](MIOPENState* state) {
-                MIOPEN_ENFORCE(miopenConvolutionForwardBias(state->miopen_handle(),
-                                                            &alpha_,
-                                                            bias_desc_,
-                                                            bias.template data<T_B>(),
-                                                            &beta_,
-                                                            top_desc_,
-                                                            Y->template mutable_data<T_Y>()));
+                MIOPEN_ENFORCE(miopenOpTensor(state->miopen_handle(),
+                                              miopenTensorOpAdd,
+                                              &alpha_,
+                                              top_desc_,
+                                              Y->template data<T_Y>(),
+                                              &alpha_,
+                                              bias_desc_,
+                                              bias.template data<T_B>(),
+                                              &beta_,
+                                              top_desc_,
+                                              Y->template mutable_data<T_Y>()));
+                hipDeviceSynchronize();
             });
         }
-
-        hipDeviceSynchronize();
     }
 
     return true;
